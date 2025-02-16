@@ -29,7 +29,7 @@ print('unique prompts count:',len(set(prompts)))
 max_retries = 3
     
 def citation_generation(prompt):
-    url = "http://101.132.252.74:20012/proxy_generate"
+    url = ""
 
     headers = {
             'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
