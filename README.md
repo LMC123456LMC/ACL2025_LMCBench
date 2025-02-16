@@ -69,7 +69,7 @@ git clone https://anonymous.4open.science/r/ACL2025_LMCBench-73A4
 
 - Ensure you have Python 3.9.0+
 ```
-conda create -n lmcbench python=3.9 -y 
+conda create -n lmcbench python=3.12 -y 
 conda activate lmcbench
 ```
 
