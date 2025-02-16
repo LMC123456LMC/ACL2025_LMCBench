@@ -5,12 +5,11 @@ import concurrent.futures
 import threading
 from tqdm import tqdm
 
-
 key = ""
 # gpt-4-turbo    gpt-4o    gpt-4o-mini 
 model = "gpt-4o"
 
-fname='/root/yuchen_llm_eval/data/用于人工标注数据/label_qwen_data_raw_0115.json'
+fname='' # filename of data
 with open(fname, 'r', encoding='utf-8') as file:
     prompt_for_artificial_data=json.load(file)
 print(len(prompt_for_artificial_data))
@@ -68,11 +67,11 @@ def chat_with_gpt(query: str,
                 raise Exception('ReturnCode.LLM_ERROR')
     return result
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,label_prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     prompt = dic['label_prompt']
-    # 删掉千问模型的模板
+    # Delete the template of the Qianwen model.
     new_prompt = prompt.partition("<|im_end|>\n<|im_start|>user\n")[-1].partition("<|im_end|>\n<|im_start|>assistant\n")[0]
 
     category = dic['category']
@@ -95,8 +94,8 @@ def item_processing(dic:dict):
 
 lock = threading.Lock()
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    filename_='/root/yuchen_llm_eval/data/用于人工标注数据/artifical_gpt4turbo_0120——00.json'
+    # Write square brackets when creating the file.
+    filename_='' # filename of response
     with open(filename_, "a", encoding="utf-8") as f:
         f.write("[")
 
@@ -111,7 +110,7 @@ def parallel_processing(items):
     with open(filename_, 'a', encoding='utf-8') as f:
         f.write(']')
 
-# 调试用
+# For debugging
 def parallel_processing_try(items):
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         for result in tqdm(executor.map(item_processing, items), total=len(items)):
