@@ -1,3 +1,4 @@
+# Script to call the Doubao model using the old prompt.
 # coding:utf-8
 import json
 import sys
@@ -37,16 +38,16 @@ model_name_dict={
     "baichuan":"baichuan4-turbo"
 
 }
-#非常重要，本次实验模型的名称。
+# the name of the model used in this experiment
 model_name_here='doubao'
-fname='/data/yuchen_llm_eval/data/是否给出引证前所有内容/1000_sample_ref_notall_02.json'
+fname='' # filename of data
 
 with open(fname, 'r', encoding='utf-8') as file:
     data_citation_combo = json.load(file)
 
 prompts=[item['prompt'] for item in data_citation_combo]
-print('prompts数量',len(prompts))
-print('独特prompts数量',len(set(prompts)))
+print('prompts count:',len(prompts))
+print('unique prompts count:',len(set(prompts)))
 
 def chat_with_api(user_msg: str,
                   assistant_msg: str,
@@ -58,7 +59,6 @@ def chat_with_api(user_msg: str,
                   retry_time: int = 6,
                   json_mode: bool = False
                   ):
-    #url = "http://47.88.65.188:8405/v1/chat/completions"
     if system_message:
         query = "<im_user>{}<user_end><im_assistant>{}".format(user_msg, assistant_msg)
         message = [
@@ -76,10 +76,6 @@ def chat_with_api(user_msg: str,
         query = "<im_user>{}<user_end><im_assistant>{}".format(user_msg, assistant_msg)
         prompt = "{}{}".format(user_msg, assistant_msg)
         message = [   
-            # {
-            #     "role": "system",
-            #     "content": system_message
-            # },
             {
                 "role": "user",
                 "content": prompt
@@ -99,7 +95,7 @@ def chat_with_api(user_msg: str,
         'Content-Type': 'application/json',
     }
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
             response = requests.request("POST", url, headers=headers, data=payload, timeout=300)
@@ -143,14 +139,14 @@ def chat_with_api(user_msg: str,
                 return res
     return res
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,label_prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     # Add a random sleep between 0 and 2 seconds
     time.sleep(random.uniform(0, 2))
     prompt = dic['prompt']
 
-    #切分出需要的user_message和assistant message
+    # Split required user_message&assistant message
     user_message_here = prompt.partition("<|im_end|>\n<|im_start|>user\n")[-1].partition("<|im_end|>\n<|im_start|>assistant\n")[0] 
     
     str = "\n***********\n请只关注'***********'之前内容的参考资料部分。输出下面这段话中的最后一句话挂载的引证，不输出这段话，形式如'[abcd1234]'：\n"
@@ -190,8 +186,8 @@ def item_processing(dic:dict):
 
 lock = threading.Lock()
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    filename_='/data/yuchen_llm_eval/data/是否给出引证前所有内容/doubao_1000_notall_0207__00.json'
+    # Write square brackets when creating the file.
+    filename_='' # filename of response
     with open(filename_, "a", encoding="utf-8") as f:
         f.write("[")
 
@@ -207,9 +203,8 @@ def parallel_processing(items):
         f.write(']')
 
 
-# 调试用
+# For debugging
 # def parallel_processing_test(items):
-#     #重要步骤，创建文件时写入开方括号
 #     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
 #         for result in tqdm(executor.map(item_processing, items), total=len(items)):
 #             with lock:
@@ -217,7 +212,7 @@ def parallel_processing(items):
 
 
 
-print('现在运行的模型名称:',model_name_dict[model_name_here])  
+print('name of the model running:',model_name_dict[model_name_here])  
 # random_combo=random.sample(data_citation_combo,100)      
 parallel_processing(data_citation_combo)
 #parallel_processing_test(data_citation_combo[8:10])
