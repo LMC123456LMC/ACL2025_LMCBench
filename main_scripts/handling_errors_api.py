@@ -1,15 +1,16 @@
-# 闭源模型处理Error
+# Closed-source model handling error.
 
 import json
 import requests
 import random
 import time
 from tqdm import tqdm
-#设置随机数种子
+
+# set random seed
 random.seed(30)
 
-#加载参考数据
-fname='/data/yuchen_llm_eval/tangbo/full_res_gpt_4o_tb_our_0128_03.json'
+# Load reference data
+fname='' # filename of data
 with open(fname, 'r', encoding='utf-8') as file:
     content=file.read()
 if content.endswith(',]'):
@@ -19,12 +20,11 @@ if content.endswith(','):
     content=content[:-1]+']'
 data_citation_combo= json.loads(content)
 
-output_file='/data/yuchen_llm_eval/data/新的验证结果/full_res_gpt_4o_tb_our_0211_03.json'
+output_file='' # filename of data handled
 
 prompts=[item['prompt'] for item in data_citation_combo]
-print('prompts数量',len(prompts))
-
-print('独特prompts数量',len(set(prompts)))
+print('prompts count:',len(prompts))
+print('unique prompts count:',len(set(prompts)))
 
 key_dict={
     "gpt": "",
@@ -52,9 +52,9 @@ model_name_dict={
     "deepseek_v3":"deepseek-chat",
     "glm":"glm-4-plus",
     "baichuan":"baichuan4-turbo"
-
 }
-#非常重要，本次实验模型的名称。
+
+# the name of the model used in this experiment.
 model_name_here='gpt'
 
 def chat_with_api(user_msg: str,
@@ -67,7 +67,6 @@ def chat_with_api(user_msg: str,
                   retry_time: int = 6,
                   json_mode: bool = False
                   ):
-    #url = "http://47.88.65.188:8405/v1/chat/completions"
     if system_message:
         query = "<im_user>{}<user_end><im_assistant>{}".format(user_msg, assistant_msg)
         message = [
@@ -107,7 +106,7 @@ def chat_with_api(user_msg: str,
         'Content-Type': 'application/json',
     }
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
             response = requests.request("POST", url, headers=headers, data=payload, timeout=300)
@@ -151,8 +150,8 @@ def chat_with_api(user_msg: str,
                 return res
     return res
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,label_prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     # Add a random sleep between 0 and 2 seconds
     time.sleep(random.uniform(0, 2))
@@ -194,7 +193,7 @@ def item_processing(dic:dict):
 
     
 def process_list_and_write_to_file(data_list: list, output_file: str):
-    # 创建一个新列表用于存储最终结果
+    # Create a new list to store the final results.
     num = 0 
     handling_error_num=0
     with open(output_file, "a", encoding="utf-8") as f:
@@ -203,18 +202,18 @@ def process_list_and_write_to_file(data_list: list, output_file: str):
     for item in tqdm(data_list, desc="Processing items"):
         if "RunTimeError Message\n\n" not in item.get("response"):
         #if item.get("response") != "RunTimeError Message\n\nFailed to get a response from the server":
-            # 如果响应不是错误信息，直接添加到结果列表
+            # If the response is not an error message, add it directly to the result list.
             num+=1
             with open(output_file, 'a', encoding='utf-8') as f:
                 json.dump(item, f, indent=4, ensure_ascii=False)
                 f.write(',')
         else:
-             # 如果是错误信息，调用 item_processing 函数处理，直到响应不再是错误信息
-            attempt_count = 0  # 用于记录当前元素的处理尝试次数
-            last_result = item  # 用于存储最后一次调用的结果
+             # If the response is not an error message, add it directly to the result list.
+            attempt_count = 0  # the number of attempts for processing the current element
+            last_result = item  # Store the result of the last call.
             while attempt_count < 3:
-                last_result = item_processing(last_result)  # 调用 item_processing 函数
-                attempt_count += 1  # 尝试次数加一
+                last_result = item_processing(last_result)  # call item_processing function
+                attempt_count += 1
                 if "RunTimeError Message\n\n" not in last_result.get("response"):
                 #if last_result.get("response") != "RunTimeError Message\n\nFailed to get a response from the server":
                     with open(output_file, 'a', encoding='utf-8') as f:
@@ -224,7 +223,7 @@ def process_list_and_write_to_file(data_list: list, output_file: str):
                     handling_error_num += 1
                     break
             else:
-                # 如果尝试了 3 次仍然没有成功，将最后一次调用的结果加入结果列表
+                # If the attempt fails after 3 tries, add the result of the last call to the result list.
                 with open(output_file, 'a', encoding='utf-8') as f:
                     json.dump(last_result, f, indent=4, ensure_ascii=False)
                     f.write(',')
@@ -232,29 +231,25 @@ def process_list_and_write_to_file(data_list: list, output_file: str):
     with open(output_file, 'a', encoding='utf-8') as f:
         f.write(']')
 
-    print(f"处理完成，成功处理了 {num} 个元素")
-    print(f"处理完成，成功处理了 {handling_error_num} 个RunTimeError")
+    print(f"Processing complete, successfully processed {num} elements.")
+    print(f"Processing complete, successfully handled {handling_error_num} RunTimeErrors.")
 
-
-# 调试用
+# For debugging
 def process_list_and_write_to_file_test(data_list: list):
-    # 创建一个新列表用于存储最终结果
     num = 0 
     handling_error_num=0
     for item in tqdm(data_list, desc="Processing items"):
-        print("当前元素为：",item)
-        #print("当前元素的response为：",item.get("response"))
+        print("current item：",item)
+        #print("response of current item：",item.get("response"))
         if "RunTimeError Message\n\n" not in item.get("response"):
-            # 如果响应不是错误信息，直接添加到结果列表
             num+=1
         else:
-            print("开始处理 RunTimeError")
-             # 如果是错误信息，调用 item_processing 函数处理，直到响应不再是错误信息
-            attempt_count = 0  # 用于记录当前元素的处理尝试次数
-            last_result = item  # 用于存储最后一次调用的结果
+            print("start handling RunTimeError")
+            attempt_count = 0
+            last_result = item
             while attempt_count < 3:
-                last_result = item_processing(last_result)  # 调用 item_processing 函数
-                attempt_count += 1  # 尝试次数加一
+                last_result = item_processing(last_result)
+                attempt_count += 1
                 if "RunTimeError Message\n\n" not in last_result.get("response"):
                     num += 1
                     handling_error_num += 1
@@ -262,8 +257,8 @@ def process_list_and_write_to_file_test(data_list: list):
                     break
             else:
                 num += 1
-    print(f"处理完成，成功处理了 {num} 个元素")
-    print(f"处理完成，成功处理了 {handling_error_num} 个RunTimeError")
+    print(f"Processing complete, successfully processed {num} elements.")
+    print(f"Processing complete, successfully handled {handling_error_num} RunTimeErrors.")
 
 process_list_and_write_to_file(data_citation_combo[7313:], output_file)
 #process_list_and_write_to_file_test(data_citation_combo[7556:7557])
