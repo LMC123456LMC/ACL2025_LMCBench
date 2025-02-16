@@ -9,7 +9,7 @@ import threading
 from tqdm import tqdm
 
 
-fname='/data/yuchen_llm_eval/data/用于人工标注数据/label_Llama3.3-70B_data_raw_0202.json'
+fname='' # filename of data
 with open(fname, 'r', encoding='utf-8') as file:
     prompt_for_artificial_data=json.load(file)
 
@@ -24,10 +24,10 @@ def citation_generation(prompt):
         }
     max_retries=3
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
-            #model_name可以输入如下多个选择
+            # model_name can be one of the following options.
             # Qwen2.5_7B，Qwen2.5_14B，Qwen2.5_32B，Qwen2.5_72B，Qwen2_7B，Qwen2_57B，Qwen2_72B
             # Llama3.3_70B
             payload = json.dumps({
@@ -36,11 +36,11 @@ def citation_generation(prompt):
                 "temperature":0,
                 "max_tokens":2048
                 })
-            # 发送请求并获取响应
+            # Send a request and get the response.
             response = requests.request("POST", url, headers=headers, data=payload,timeout=300)
             #print(response.text)
-            # 检查响应状态
-            response.raise_for_status()  # 如果响应错误，抛出异常
+            # Check the response status.
+            response.raise_for_status()  # If the response is incorrect, throw an exception.
             if response.status_code == 200:
                 #print('response text:\n',response.text)
                 response_json = json.loads(response.text)
@@ -63,7 +63,7 @@ def citation_generation(prompt):
                 time.sleep(60)
         except Exception as e:
             count = count + 1
-            print(f"请求失败: {e}, 正在重试... ({count}/{max_retries})")
+            print(f"Request failed: {e}, retrying... ({count}/{max_retries})")
             if count >= max_retries:
                 if response:
                     result = "RunTimeError Message\n\n" + response.text
@@ -80,8 +80,8 @@ def citation_generation(prompt):
                 return res
     return res
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,label_prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     prompt = dic['label_prompt']
     #Llama3.3-70B
@@ -91,8 +91,6 @@ def item_processing(dic:dict):
     # new_div_string='<|im_end|>\n'
     # old_div_string='<|im_end|>\n<|im_start|>assistant\n'
     # prompt=prompt.replace(old_div_string,new_div_string)
-
-    #
 
     category = dic['category']
     output= dic['output']
@@ -114,8 +112,8 @@ def item_processing(dic:dict):
 
 lock = threading.Lock()
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    filename_='/data/yuchen_llm_eval/data/用于人工标注数据/artifical_Llama3.3-70B_0204-01.json'
+    # Write square brackets when creating the file.
+    filename_='' # filename of reaponse
     with open(filename_, "a", encoding="utf-8") as f:
         f.write("[")
         f.close()
