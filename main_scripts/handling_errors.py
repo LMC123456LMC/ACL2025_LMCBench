@@ -122,8 +122,7 @@ def process_list_and_write_to_file(data_list: list, output_file: str):
         f.close()
     for item in tqdm(data_list, desc="Processing items"):
         if "RunTimeError Message\n\n" not in item.get("response"):
-        #if item.get("response") != "RunTimeError Message\n\nFailed to get a response from the server":
-            # 如果响应不是错误信息，直接添加到结果列表
+            # If the response is not an error message, add it directly to the result list.
             num+=1
             with open(output_file, 'a', encoding='utf-8') as f:
                 json.dump(item, f, indent=4, ensure_ascii=False)
@@ -136,7 +135,6 @@ def process_list_and_write_to_file(data_list: list, output_file: str):
                 last_result = item_processing(last_result)  # call item_processing function
                 attempt_count += 1
                 if "RunTimeError Message\n\n" not in last_result.get("response"):
-                #if last_result.get("response") != "RunTimeError Message\n\nFailed to get a response from the server":
                     with open(output_file, 'a', encoding='utf-8') as f:
                         json.dump(last_result, f, indent=4, ensure_ascii=False)
                         f.write(',')
