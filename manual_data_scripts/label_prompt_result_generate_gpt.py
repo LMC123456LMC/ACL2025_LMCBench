@@ -22,7 +22,7 @@ def chat_with_gpt(query: str,
                   retry_time: int = 5,
                   json_mode: bool = False
                   ):
-    url = "https://apigateway.offline.xinyunews.cn/llm/v1/chat/completions"
+    url = ""
     if system_message:
         message = [
             {
