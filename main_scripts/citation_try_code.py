@@ -1,9 +1,7 @@
-#2025 1月27日大规模引证准确率试验
-
 # -*- coding: utf-8 -*-
-#测评大语言模型生成正确的引证，也就是citation的能力的脚本
-#这个脚本目前只针对开源模型，而且会用一个函数来实现测评大语言模型是否
-#生成正确的引证的功能的脚本
+# Script to evaluate the ability of a large language model to generate correct citations.
+# This script currently only targets open-source models 
+# and will use a function to evaluate whether the large language model generates correct citations.
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
@@ -14,20 +12,20 @@ import time
 import concurrent.futures
 import threading
 from tqdm import tqdm
-#设置随机数种子
+# set random seed
 random.seed(30)
 
-print('检查gpu： ',torch.cuda.is_available())
+print('check gpu: ',torch.cuda.is_available())
 
-#加载参考数据
-fname='/data/yuchen_llm_eval/data/参考资料倒序/1000_sample_ref_reverse_order.json'
+# Load reference data
+fname='' # filename of data
 with open(fname, 'r', encoding='utf-8') as file:
     data_citation_combo = json.load(file)
 
 
 prompts=[item['prompt'] for item in data_citation_combo]
-print('prompts数量',len(prompts))
-print('独特prompts数量',len(set(prompts)))
+print('prompts count:',len(prompts))
+print('unique prompts count:',len(set(prompts)))
 
 max_retries = 3
 
@@ -42,10 +40,10 @@ def citation_generation(prompt):
         }
     max_retries=3
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
-            # model_name可以输入如下多个选择
+            # model_name can be one of the following options.
             # Qwen2.5_7B，Qwen2.5_14B，Qwen2.5_32B，Qwen2.5_72B，Qwen2_7B，Qwen2_57B，Qwen2_72B
             # Llama3.3_70B，glm_4_9B_chat，deepseek
             payload = json.dumps({
@@ -54,14 +52,13 @@ def citation_generation(prompt):
                 "temperature":0,
                 "max_tokens":20
                 })
-            # 发送请求并获取响应
+            # Send a request and get the response.
             response = requests.request("POST", url, headers=headers, data=payload,timeout=5)
-            # 检查响应状态
-            response.raise_for_status()  # 如果响应错误，抛出异常
+            # Check the response status.
+            response.raise_for_status()  # If the response is incorrect, throw an exception.
         
             if response.status_code == 200:
                 # print('response text:\n',response.text)
-                # result = (json.loads(response.text)['text'][0]).partition(prompt)[-1]
                 response_json = json.loads(response.text)
                 if "text" in response_json:
                     result = response_json["text"][0].partition(prompt)[-1]
@@ -84,7 +81,7 @@ def citation_generation(prompt):
         
         except Exception as e:
             count = count + 1
-            print(f"请求失败: {e}, 正在重试... ({count}/{max_retries})")
+            print(f"Request failed: {e}, retrying... ({count}/{max_retries})")
             if count >= max_retries:
                 if response:
                     result = "RunTimeError Message\n\n" + response.text
@@ -102,11 +99,11 @@ def citation_generation(prompt):
     return res
             
 
-print("\n模型调用开始\n")
+print("\nModel call started\n")
 cnt_irr=0
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     prompt = dic['prompt']
     category = dic['category']
@@ -134,8 +131,8 @@ def item_processing(dic:dict):
 lock = threading.Lock()
 
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    filename_='/data/yuchen_llm_eval/data/参考资料倒序/Qwen2_7B_1000_reverse_order_0208__00.json'
+    # Write square brackets when creating the file.
+    filename_='' # filename of response
     with open(filename_, "a", encoding="utf-8") as f:
         f.write("[")
         f.close()
@@ -150,7 +147,7 @@ def parallel_processing(items):
     with open(filename_, 'a', encoding='utf-8') as f:
         f.write(']')
 
-# 调试用
+# For debugging
 # def parallel_processing_test(items):
 #     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
 #         for result in tqdm(executor.map(item_processing, items), total=len(items)):
