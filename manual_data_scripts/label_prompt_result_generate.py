@@ -14,7 +14,7 @@ with open(fname, 'r', encoding='utf-8') as file:
     prompt_for_artificial_data=json.load(file)
 
 def citation_generation(prompt):
-    url = "http://101.132.252.74:20012/proxy_generate"
+    url = ""
 
     headers = {
             'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
