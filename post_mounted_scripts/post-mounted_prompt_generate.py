@@ -1,9 +1,7 @@
-#大规模引证准确率试验
-
 # -*- coding: utf-8 -*-
-#测评大语言模型生成正确的引证，也就是citation的能力的脚本
-#这个脚本目前只针对开源模型，而且会用一个函数来实现测评大语言模型是否
-#生成正确的引证的功能的脚本
+# Script to evaluate the ability of a large language model to generate correct citations.
+# This script currently only targets open-source models 
+# and will use a function to evaluate whether the large language model generates correct citations.
 
 from itertools import islice
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -16,17 +14,18 @@ import time
 import concurrent.futures
 import threading
 from tqdm import tqdm
-#设置随机数种子
+
+# set random seed
 random.seed(30)
 
-print('检查gpu： ',torch.cuda.is_available())
+print('check gpu： ',torch.cuda.is_available())
 
-#加载参考数据
-fname='/root/yuchen_llm_eval/data/3000_sample.json'
+# Load reference data
+fname='' # filename of data
 with open(fname, 'r', encoding='utf-8') as file:
     data_citation_combo = json.load(file)
 
-#处理prompt
+# handle prompt
 def process_prompt(prompt):
     prompt_here=prompt
     prompt_here=prompt_here.replace('[Cite-*]', '[XXXXXXXX]')
@@ -34,12 +33,12 @@ def process_prompt(prompt):
     prompt_here=prompt_here.replace('[Cite-100]', '[2hdj4OHk]')
     pre_string='<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n'
     if "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n你是一个中文大语言模型。" in prompt_here:
-        #问答数据前置指令
+        # Preliminary instructions for question and answer data
         pre_instruction='我将提供给你一个问题，回答此问题可能需要的参考资料以及某AI助手对该问题的前半部分回答。请根据这些内容判断AI助手生成这前半部分回答的最后一句时使用了参考资料中的哪一条。\n'
-        #后置指令
+        # Post instruction
         post_instruction='\n\nAI助手对此问题的前半部分回答：'
         
-        #问答指令去除
+        # Question answering instruction removal
         chunk_ref=prompt_here.partition("\n\n参考资料：\n")[-1].partition("相关问答：")[0].partition("提示思路：")[0].partition("\n\n\n结构化模版：\n")[0]
         lis_here=prompt_here.partition(chunk_ref)
         pre_ref=lis_here[0]
@@ -49,11 +48,11 @@ def process_prompt(prompt):
         question=pre_ref[start_index:end_index]
         pre_ref_new=pre_string+pre_instruction+"问题: "+question+"\n\n参考资料：\n\n"+chunk_ref+post_instruction
     else:
-        #新闻数据前置指令
+        # News data precommand
         pre_instruction='我将提供给你一个综述题目，创作此综述可能需要的参考资料以及某AI助手根据此题目创作的前半部分综述。请根据这些内容判断AI助手生成前半部分综述的最后一句时使用了参考资料中的哪一条。\n'
-        #后置指令
+        # Postinstruction
         post_instruction='\n\nAI助手根据此题目创作的前半部分综述：\n'
-        #新闻指令去除
+        # News order removal
         chunk_ref=prompt_here.partition("\n\n参考资料：\n")[-1].partition("注意遵守以下事项：\n1. 你需要在回答结果中插入引用证据的来源编号，格式为[编号]")[0]
         lis_here=prompt_here.partition(chunk_ref)
         pre_ref=lis_here[0]
@@ -65,7 +64,7 @@ def process_prompt(prompt):
     return pre_ref_new
 
 
-#形成后挂载形式prompt
+# post_mounted form prompt
 def generate_post_mounted_prompt(pro_prompt):
     div_string='<|im_end|>\n<|im_start|>assistant\n'
     answer=pro_prompt.partition(div_string)[-1]
@@ -74,7 +73,7 @@ def generate_post_mounted_prompt(pro_prompt):
     return post_mounted_prompt
 
 def citation_generation(prompt):
-    url = "http://101.132.252.74:20012/proxy_generate"
+    url = ""
 
     headers = {
             'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
@@ -84,21 +83,22 @@ def citation_generation(prompt):
         }
     max_retries=3
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
-            #model_name可以输入如下多个选择，Qwen2.5_7B，Qwen2.5_14B，Qwen2.5_32B，Qwen2.5_72B，Qwen2_7B, Qwen1.5_7B
+            # model_name can be one of the following options.
+            # Qwen2.5_7B，Qwen2.5_14B，Qwen2.5_32B，Qwen2.5_72B，Qwen2_7B, Qwen1.5_7B
             payload = json.dumps({
                 'text': prompt,
                 "model_name":"Qwen2.5_7B",
                 "temperature":0,
                 "max_tokens":50
                 })
-            # 发送请求并获取响应
+            # Send a request and get the response.
             response = requests.request("POST", url, headers=headers, data=payload,timeout=60)
             #print(response.text)
-            # 检查响应状态
-            response.raise_for_status()  # 如果响应错误，抛出异常
+            # Check the response status.
+            response.raise_for_status()  # If the response is incorrect, throw an exception.
             if response.status_code == 200:
                 #print('response text:\n',response.text)
                 response_json = json.loads(response.text)
@@ -121,7 +121,7 @@ def citation_generation(prompt):
                 time.sleep(60)
         except Exception as e:
             count = count + 1
-            print(f"请求失败: {e}, 正在重试... ({count}/{max_retries})")
+            print(f"Request failed: {e}, retrying... ({count}/{max_retries})")
             if count >= max_retries:
                 if response:
                     result = "RunTimeError Message\n\n" + response.text
@@ -162,15 +162,14 @@ def item_processing(dic:dict):
     }
     return dic_new
 
-print(citation_generation(prompt='请进行简单的自我介绍。'))
+#print(citation_generation(prompt='请进行简单的自我介绍。'))
 lock = threading.Lock()
 
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    filename_='/root/yuchen_llm_eval/data/新的验证结果/post_mounted_qwen2.5__7B_0206_3000_sample_01.jsonl'
+    # Write square brackets when creating the file.
+    filename_='' # filename of response
     with open(filename_, "a", encoding="utf-8") as f:
         f.close()
-
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         for result in tqdm(executor.map(item_processing, items), total=len(items)):
@@ -178,7 +177,4 @@ def parallel_processing(items):
                 with open(filename_, 'a', encoding='utf-8') as f:
                     f.write(json.dumps(result, ensure_ascii=False)+"\n")
 
-    
 parallel_processing(data_citation_combo)
-
-
