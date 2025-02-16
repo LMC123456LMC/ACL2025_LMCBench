@@ -114,7 +114,7 @@ Baichuan4-turbo, Doubao, Moonshot, Deepseek-v3, and GPT-4-turbo, GPT-4o, GPT4o-m
 
 Configure the Key of the preceding model in main_scripts/api_large_experiment.py(No need to add "Bearer")
 
-```json
+````
 key_dict={
     "gpt": "key",
     "baichuan":"key",
@@ -123,7 +123,7 @@ key_dict={
     "deepseek_v3":"key",
     "glm":"key"
 }
-```
+````
 
 Make sure to set the correct <model_name_here>, <fname>, <filename_>.
 
