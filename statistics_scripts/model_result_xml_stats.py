@@ -1,22 +1,13 @@
-# 新闻数据统计
-
 import json
 import re
 from tqdm import tqdm
 import sys
 
 model = "Qwen2.5_32B"
-f_res='/data/yuchen_llm_eval/data/新的验证结果/xml_results2.5_72B_0205_3000_sample_new_02.json'
-#f_res='/root/yuchen_llm_eval/data/参考资料是否乱序/Llama3.3-70B_1000_disorder_0206__00.json'
-#f_stats='/root/yuchen_llm_eval/data/try_result/gpt_try_stats_0125_01.json'
-log_file_path = "/data/yuchen_llm_eval/data/新的验证结果/xml_results_qwen2.5_72B_3000_log_0207.txt"
-# model = "千问2-72B"
-# f_res='/root/yuchen_llm_eval/data/新的验证结果/new_50%_combined_data_results2_72B_0115_01.json'
-# f_stats='/root/yuchen_llm_eval/data/新的验证结果/new_50%_combined_data_results2_72B_0115_01_stats1.json'
-# f_group='/root/yuchen_llm_eval/data/新的验证结果/new_50%_combined_data_results2.5_7B_0110_01_stats2_group.json'
-# log_file_path = "/root/yuchen_llm_eval/data/新的验证结果/output_log_0115_qwen2_72B.txt"
-sys.stdout = open(log_file_path, 'w', encoding='utf-8')
+f_res='' # filename of data
+log_file_path = "" # filename of output log
 
+sys.stdout = open(log_file_path, 'w', encoding='utf-8')
 print("result file name:",f_res)
 
 with open(f_res, 'r', encoding='utf-8') as file:
@@ -27,17 +18,17 @@ if content.endswith(','):
     print('end with comma')
     content=content[:-1]+']'
 qwen25_res = json.loads(content)
-print(model, '结果数目:',len(qwen25_res))
+print(model, 'Result count:',len(qwen25_res))
 prompts = []
 for it in qwen25_res:
     prompts.append(it['prompt'])
-print(model, '独特prompt数目:',len(set(prompts)))
+print(model, 'unique prompt count:',len(set(prompts)))
 
-#加载参考文件
-ref_path = '/data/yuchen_llm_eval/data/3000_sample.json'
+# Load reference file
+ref_path = '../3000_sample.json'
 with open(ref_path, 'r', encoding='utf-8') as file:
     ref_data = json.load(file)
-#检查模型结果文件和参考文件是否一致
+# Check that the model result file is consistent with the reference file
 cnt_match=0
 for ind in range(0,len(ref_data)):
     output1 = qwen25_res[ind]['output']
@@ -47,40 +38,36 @@ for ind in range(0,len(ref_data)):
     else:
         cnt_match=cnt_match+1
 if cnt_match==len(ref_data):
-    print('模型结果匹配原始数据')
+    print('The model results match the original data')
 else:
-    print('模型结果不匹配原始数据，有错误',ref_data-cnt_match,'处')
+    print('Model result does not match raw data, there are errors ',ref_data-cnt_match,' place ')
 print('-----------------')
-print('不规则输出：')
+print('Irregular output：')
 
-# 获取正确答案
+# get right answer
 def get_right_answer(res:dict, raw_answer: str):
 
-    # :res: 模型输出结果
-    # :param raw_answer: 完整原回答
-    # :return: 此位置上的正确答案候选
-    # if model == "gpt_4o":
-    #     div_string = "\n***********\n请只关注'***********'之前内容的参考资料部分。输出下面这段话中的最后一句话挂载的引证，不输出这段话，形式如'[abcd1234]'：\n"
-    # else:
-    #     div_string = "<|im_end|>\n<|im_start|>assistant\n" 
+    # :res: Model output
+    # :param raw_answer: Complete original answer
+    # :return: The correct answer candidate for this position
 
-    #div_string="<user_end><im_assistant>" # 闭源模型
-    div_string = "<|im_end|>\n<|im_start|>assistant\n"  # 千问
+    #div_string="<user_end><im_assistant>" # Closed-source model
+    div_string = "<|im_end|>\n<|im_start|>assistant\n"  # qwen
     #div_string = "\n\nAssistant:"  # deepseek
     # div_string = "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"  # Llama
     #div_string="<|assistant|>\n" # glm
     
-    prefix = res.get('prompt').partition(div_string)[-1][:-1] # 去掉"["
+    prefix = res.get('prompt').partition(div_string)[-1][:-1] # delete"["
     answer_after_prefix = raw_answer.partition(prefix)[-1]
     answer_candidates = []
     if prefix not in raw_answer:
-        print('错误匹配，原文无本句')
-        print("句子: ",prefix)
+        print('Incorrect match, no sentence in the original text')
+        print("sentence: ",prefix)
         return []
     while True:
-        #匹配文本anser_after_prefix中的第一个形如[abcd1234]的引证
+        # Matches the citation for the first shape like [abcd1234] in the text anser_after_prefix
         candidate = re.match(r"\[([a-zA-Z0-9]{8})\]", answer_after_prefix)
-        #如果有，就去掉这个引证，匹配下一个引证。
+        # If there is one, remove that quote and match it to the next.
         if candidate:
             answer_candidates.append(candidate.group())
             answer_after_prefix = answer_after_prefix.partition(candidate.group())[-1]
@@ -98,23 +85,17 @@ for index in range(0,len(ref_data)):
     cnt+=1
     dic={}
     category = res.get('category')
-    output = ref_item.get('output') #参考文件，原始数据能够告诉我们标准答案是什么
-    prompt = ref_item.get('prompt') #参考文件，原始数据能够告诉我们标准答案是什么
+    output = ref_item.get('output') # Reference files, raw data can tell us what the standard answer is
+    prompt = ref_item.get('prompt') # Reference files, raw data can tell us what the standard answer is
     response = res.get('response')
 
     if "Error:" in response or "RunTimeError" in response or "当前分组上游负载已饱和" in response:
         cnt-=1
         continue
-    
-    # if ']' in response:
-    #     index = response.find(']')
-    #     #response = response[:index]
-    #     response = response[max(0, index - 8):index]
+
     response='['+response+']'
-    
-    # correct_answer = output.partition(single_sentence)[-1].partition("]")[0] 
-    # correct_answer = res.get('correct answer')
-    correct_answer=get_right_answer(res=ref_item,raw_answer=output) #原始数据告诉我们标准答案
+
+    correct_answer=get_right_answer(res=ref_item,raw_answer=output) # Raw data tells us the standard answer
     
     if not correct_answer:
         print('error! no right choice!')
@@ -133,7 +114,7 @@ for index in range(0,len(ref_data)):
             irrg+=1
             print("response: ", response)
             print("     correct answer: ", correct_answer)
-            #continue # 删掉错误数据
+            #continue # Delete the wrong data
         dic['category']=category
         dic['output']=output
         dic['prompt']=prompt
@@ -149,22 +130,12 @@ for index in range(0,len(ref_data)):
         new_res.append(dic)
 
 print('-----------------')
-print('引证题目数目:', cnt) # 处理的条目数量
-print('不规则数据数目:', irrg) # 有问题的条目数量
-print(model, '模型引证正确数目:', corr)  # 输出模型正确的引证数目
-print(model, '模型引证正确率:', round(corr / cnt * 100, 2)) 
-
-# with open(f_stats, 'w', encoding='utf-8') as f:
-#     json.dump(new_res, f, indent=4, ensure_ascii=False)  # 将处理后的结果写入文件
+print('citation count:', cnt) # Number of entries processed
+print('Irregular data number:', irrg) # Number of problematic entries
+print(model, 'Models cite correct numbers:', corr)  # Output the correct number of citations for the model
+print(model, 'Correct rate of model citation:', round(corr / cnt * 100, 2)) 
 
 new_outputs=[it['output'] for it in new_res]
-print('去除不规则数据之后的输出数量:',len(set(new_outputs)))
-
-
-
-
-# # 将结果保存到文件
-# with open(f_group, 'w', encoding='utf-8') as f:
-#     json.dump(new_stats, f, indent=4, ensure_ascii=False)
+print('The number of outputs after removing irregular data:',len(set(new_outputs)))
 
 sys.stdout.close()
