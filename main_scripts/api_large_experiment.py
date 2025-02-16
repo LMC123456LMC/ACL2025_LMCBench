@@ -1,3 +1,4 @@
+# Script used to call the closed-source model through its api
 # coding:utf-8
 import json
 import sys
@@ -37,16 +38,16 @@ model_name_dict={
     "baichuan":"baichuan4-turbo"
 
 }
-#非常重要，本次实验模型的名称。
+# the name of the model used in this experiment
 model_name_here='gpt'
-fname='/data/yuchen_llm_eval/data/参考资料倒序/1000_sample_ref_reverse_order.json'
+fname='' # filename of data
 
 with open(fname, 'r', encoding='utf-8') as file:
     data_citation_combo = json.load(file)
 
 prompts=[item['prompt'] for item in data_citation_combo]
-print('prompts数量',len(prompts))
-print('独特prompts数量',len(set(prompts)))
+print('prompts count:',len(prompts))
+print('unique prompts count:',len(set(prompts)))
 
 def chat_with_api(user_msg: str,
                   assistant_msg: str,
@@ -58,7 +59,6 @@ def chat_with_api(user_msg: str,
                   retry_time: int = 6,
                   json_mode: bool = False
                   ):
-    #url = "http://47.88.65.188:8405/v1/chat/completions"
     if system_message:
         query = "<im_user>{}<user_end><im_assistant>{}".format(user_msg, assistant_msg)
         message = [
@@ -98,7 +98,7 @@ def chat_with_api(user_msg: str,
         'Content-Type': 'application/json',
     }
     count = 0
-    response = None  # 初始化 response 变量
+    response = None  # init response
     while True:
         try:
             response = requests.request("POST", url, headers=headers, data=payload, timeout=300)
@@ -142,20 +142,20 @@ def chat_with_api(user_msg: str,
                 return res
     return res
 
-#处理每条原始的引证数据，每条原始的引证数据是一个字典dict，有category,label_prompt,output三个字段
-#返回每条原始引证数据在一个字典中，包含原有的category,prompt,output，并且加上模型的回答。
+# Process each raw citation data, where each raw citation data is a dictionary with three fields: category, label_prompt, and output.
+# Return each raw citation data in a dictionary, including the original category, prompt, output, along with the model's response.
 def item_processing(dic:dict):
     # Add a random sleep between 0 and 2 seconds
     time.sleep(random.uniform(0, 2))
     prompt = dic['prompt']
-    #问答数据，新闻数据去除部分指令。
+    # Question-answer data and news data with some instructions removed.
     str_to_replace_QA1='\n结构化模版：\n为了使答案更清晰和有组织，以下是几种常见的结构化方式，你可以选用其中一种或多种方式组织答案：\n-简介-主体-总结：引入主题，详细讨论，以要点总结。\n-针对每个子问题的段落：适合复杂问题，每一子问题一个段落回答。\n-因果关系：说明事件的原因和结果。\n-比较对比：描述并对比两个以上的概念或事物。\n-时间顺序：按事件发生的顺序描述过程或步骤。\n-问题解决：介绍问题，阐述解决方案和策略。\n-优缺点：列举决策或选择的正反两面。\n-定义和例子：给出定义并通过例子解释。\n-逻辑推理：基于假设或前提，逻辑推导结论。\n-列表结构：列出事实或特点，方便扫描。\n-分类结构：介绍概念，按标准分组并详细说明。\n-主题和变化：探讨核心主题及其变体。\n-案例研究：通过具体案例解释理论或概念。\n-层次结构：信息按重要性或顺序排列。\n-议题和反议：展示议题的支持和反对观点。'
     str_to_div_QA2='\n\n另外遵循以下要求：'
     str_to_replace_news1='，你的输出应当以\"[综述]\"作为前缀，即。\n#############\n[综述]: XXXXXXX\n############# '
     str_to_replace_QA3='\n\n在结构化答案时，'
     str_new_QA3='\n\n在输出答案时，'
 
-    #切分出需要的user_message和assistant message
+    # Split required user_message&assistant message
     user_message_here = prompt.partition("<|im_end|>\n<|im_start|>user\n")[-1].partition("<|im_end|>\n<|im_start|>assistant\n")[0] 
     assistant_message_here = prompt.partition("<|im_end|>\n<|im_start|>assistant\n")[-1]
     
@@ -196,16 +196,15 @@ def item_processing(dic:dict):
 
 lock = threading.Lock()
 def parallel_processing(items):
-    #重要步骤，创建文件时写入开方括号
-    #filename_='/root/yuchen_llm_eval/data/新的验证结果/full_res_gpt_4o_0127__tb_05.json'
-    filename_='/data/yuchen_llm_eval/data/参考资料倒序/gpt-4o_1000_reverse_order_0209__00.json'
+    # Write square brackets when creating the file.
+    filename_='' # filename of response
     with open(filename_, "a", encoding="utf-8") as f:
         f.write("[")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         for result in tqdm(executor.map(item_processing, items), total=len(items)):
             with lock:
-                #print(result)
+                # print(result)
                 with open(filename_, 'a', encoding='utf-8') as f:
                     json.dump(result, f, indent=4, ensure_ascii=False)
                     f.write(',')
@@ -214,15 +213,14 @@ def parallel_processing(items):
         f.write(']')
 
 
-# 调试用
+# For debugging
 # def parallel_processing_test(items):
-#     #重要步骤，创建文件时写入开方括号
 #     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
 #         for result in tqdm(executor.map(item_processing, items), total=len(items)):
 #             with lock:
 #                 print(result)
 
-print('现在运行的模型名称:',model_name_dict[model_name_here])  
+print('name of the model running',model_name_dict[model_name_here])  
 # random_combo=random.sample(data_citation_combo,100)      
 parallel_processing(data_citation_combo)
 # parallel_processing_test(data_citation_combo[:1])
