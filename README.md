@@ -61,27 +61,27 @@ Our benchmark dataset consists of over 2,400 query-response pairs where response
 
 ### 1. Clone the project repository
 
-````bash
+```bash
 git clone https://anonymous.4open.science/r/ACL2025_LMCBench-73A4
-````
+```
 
 ### 2. Set up the environment
 
 - Ensure you have Python 3.9.0+
-```
+```bash
 conda create -n lmcbench python=3.12 -y 
 conda activate lmcbench
 ```
 
 - install requirements 
-```
+```bash
 cd lmcbench
 pip install -r requirements.txt
 ```
 
 ### 3. Enter the main experiment scripts directory
 
-```
+```bash
 cd ./main_scripts
 ```
 
@@ -91,30 +91,30 @@ We provide two methods for model inference: (1) for open-source models, download
 
 #### a. Open-source models: local model inference
 
-Make sure to set the correct <url>, <model_name>, <fname>, <filename_>.
+Make sure to set the correct input(`url`, `model_name`, `fname`, `filename_`.
 
-- <url> is the interface that invokes the model stored locally
-- <model_name> is the model to generate the citations
-- <fname> is the path to the original data file
-- <filename_> is the path to store the response data
+- `url` is the interface that invokes the model stored locally
+- `model_name` is the model to generate the citations
+- `fname` is the path to the original data file
+- `filename_` is the path to store the response data
 
 Run the following command for model inference：
 
-````
+```bash
 python citation_try_code.py
-````
+```
 
 #### b. Closed-source models: model inference with the official APIs
 
 ##### Supported models
 
-Baichuan4-turbo, Doubao, Moonshot, Deepseek-v3, and GPT-4-turbo, GPT-4o, GPT4o-mini from OpenAI
+'Baichuan4-turbo', 'Doubao', 'Moonshot', 'Deepseek-v3', and 'GPT-4-turbo', 'GPT-4o', 'GPT4o-mini' from OpenAI
 
 ##### Configure the API key
 
 Configure the Key of the preceding model in main_scripts/api_large_experiment.py(No need to add "Bearer")
 
-````
+```bash
 key_dict={
     "gpt": "key",
     "baichuan":"key",
@@ -123,36 +123,36 @@ key_dict={
     "deepseek_v3":"key",
     "glm":"key"
 }
-````
+```
 
-Make sure to set the correct <model_name_here>, <fname>, <filename_>.
+Make sure to set the correct input(`model_name_here`, `fname`, `filename`>.
 
-- <model_name_here> is the model to generate the citations
-- <fname> is the path to the original data file
-- <filename_> is the path to store the response data
+- `model_name_here` is the model to generate the citations
+- `fname` is the path to the original data file
+- `filename_` is the path to store the response data
 
 Run the following command for model inference：
 
-````
+```bash
 python api_large_experiment.py
-````
+```
 
 ### 5. Evaluation with GPT-4
 
 Run the following command to evaluate your generations, and aggregate the final results.
 
-Make sure to set the correct <model>, <f_res>, <log_file_path>.
+Make sure to set the correct input(`model`, `f_res`, `log_file_path`).
 
-- <model> is the model which generated the citations
-- <f_res> is the path to the generations data file
-- <log_file_path> is the path to store the resulting statistics
+- `model` is the model which generated the citations
+- `f_res` is the path to the generations data file
+- `log_file_path` is the path to store the resulting statistics
 
 
-````
+```bash
 cd ..
 cd statistics_scripts
 python model_result_stats.py
-````
+```
 
 ## Project Structure
 ```
