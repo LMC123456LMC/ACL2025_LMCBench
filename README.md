@@ -91,7 +91,7 @@ We provide two methods for model inference: (1) for open-source models, download
 
 #### a. Open-source models: local model inference
 
-Make sure to set the correct input(`url`, `model_name`, `fname`, `filename_`.
+Make sure to set the correct input(`url`, `model_name`, `fname`, `filename_`).
 
 - `url` is the interface that invokes the model stored locally
 - `model_name` is the model to generate the citations
@@ -125,7 +125,7 @@ key_dict={
 }
 ```
 
-Make sure to set the correct input(`model_name_here`, `fname`, `filename`>.
+Make sure to set the correct input(`model_name_here`, `fname`, `filename`).
 
 - `model_name_here` is the model to generate the citations
 - `fname` is the path to the original data file
